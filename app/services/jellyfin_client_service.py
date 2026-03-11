@@ -46,6 +46,15 @@ class JellyfinClientService:
             timeout=10.0
         )
 
+    def get_current_user_id(self) -> str:
+        """Obtiene el ID del primer usuario administrador disponible."""
+        # El endpoint /Users devuelve la lista de usuarios
+        response = self._client.get("/Users")
+        response.raise_for_status()
+        users = response.json()
+        # Retornamos el ID del primer usuario (típicamente el admin)
+        return users[0]["Id"]
+
     def verify_connection(self) -> bool:
         """
         Verifica si la API Key es válida y el servidor está accesible.
@@ -67,7 +76,11 @@ class JellyfinClientService:
             self.logger.error(f"[Error] No se pudo conectar al host: {e}")
             return False
 
-    def raw_get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+    def close(self) -> None:
+        """Cierra la sesión del cliente httpx."""
+        self._client.close()
+
+    def _raw_get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Método auxiliar para 'explorar' la API. 
         Retorna el JSON crudo para que podamos analizarlo y luego crear los modelos.
@@ -76,7 +89,7 @@ class JellyfinClientService:
         response.raise_for_status()
         return response.json()
 
-    def raw_post(self, endpoint: str, data: Dict[str, Any]) -> bool:
+    def _raw_post(self, endpoint: str, data: Dict[str, Any]) -> bool:
         """
         Envía una petición POST al servidor.
         
@@ -102,7 +115,7 @@ class JellyfinClientService:
         """
         endpoint = f"/Items/{item_id}"
         self.logger.info(f"Actualizando metadatos para el ítem: {item_id}")
-        return self.raw_post(endpoint, updated_data)
+        return self._raw_post(endpoint, updated_data)
 
     def get_artist_by_name(self, name: str) -> Artist:
         """
@@ -116,7 +129,7 @@ class JellyfinClientService:
         """
         endpoint = f"/Artists/{name}"
         self.logger.info(f"Obteniendo artista: {name}")
-        data = self.raw_get(endpoint)
+        data = self._raw_get(endpoint)
         return self.parser.parse_artist(data)
 
     def get_items_by_artist(self, artist_id: str, item_type: str = "MusicAlbum") -> List[Album]:
@@ -137,7 +150,7 @@ class JellyfinClientService:
             "Fields": "Genres,Tags,Path"
         }
         self.logger.info(f"Realizando búsqueda de Albums a partir de ID de artista: {artist_id}")
-        data = self.raw_get("/Items", params=params)
+        data = self._raw_get("/Items", params=params)
         albums = [self.parser.parse_album(item) for item in data["Items"]]
         return albums
 
@@ -158,10 +171,19 @@ class JellyfinClientService:
             "Fields": "Genres,Tags,Path,GenreItems"
         }
         self.logger.info(f"Obteniendo tracks para el álbum ID: {album_id}")
-        data = self.raw_get("/Items", params=params)
+        data = self._raw_get("/Items", params=params)
         tracks = [self.parser.parse_track(item) for item in data["Items"]]
         return tracks
 
-    def close(self) -> None:
-        """Cierra la sesión del cliente httpx."""
-        self._client.close()
+    def get_raw_item(self, item_id: str) -> Dict[str, Any]:
+        """Obtiene la metadata completa y cruda de un ítem por su ID."""
+        user_id = self.get_current_user_id() 
+        params = {"userId": user_id}
+        return self._raw_get(f"/Items/{item_id}", params=params)
+
+    def update_item(self, item_id: str, data: Dict[str, Any]) -> bool:
+        """Envía el objeto completo de vuelta para actualizar el ítem."""
+        # Es fundamental asegurarse de que el servidor no sobrescriba 
+        # nuestros cambios en el próximo escaneo.
+        data["LockData"] = True 
+        return self._raw_post(f"/Items/{item_id}", data)
