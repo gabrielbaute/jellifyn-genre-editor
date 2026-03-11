@@ -31,6 +31,20 @@ class GenreEditor:
             return []
         return self.jf.get_items_by_artist(artist.artis_id)
 
+    def add_gemre_to_album(self, album_id: str, genre: str) -> None:
+        """
+        Añade un género a un álbum específico.
+
+        Args:
+            album_id (str): ID del álbum.
+            genre (str): Género a añadir.
+        
+        Returns:
+            None
+        """
+        self._add_genre_to_an_album_item(album_id, genre)
+
+
     def add_genre_to_album_tracks(self, album_id: str, genre: str) -> None:
         """
         Añade un género a todos los tracks de un álbum específico.
@@ -93,5 +107,20 @@ class GenreEditor:
             success = self.jf.update_item(track_id, raw_data)
             if success:
                 self.logger.info(f"[OK] Track '{raw_data.get('Name')}': +{genre}")
+                return True
+        return False
+    
+    def _add_genre_to_an_album_item(self, item_id: str, genre: str) -> bool:
+        raw_data = self.jf.get_raw_item(item_id)
+        if not raw_data:
+            return False
+        
+        current_genres = raw_data.get("Genres", [])
+        if not genre in current_genres:
+            current_genres.append(genre)
+            raw_data["Genres"] = current_genres
+            success = self.jf.update_item(item_id, raw_data)
+            if success:
+                self.logger.info(f"[OK] Album ':{raw_data.get('Name')}': +{genre}")
                 return True
         return False
