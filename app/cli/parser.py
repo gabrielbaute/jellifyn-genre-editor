@@ -1,0 +1,46 @@
+from pathlib import Path
+from argparse import ArgumentParser
+
+from app.settings.app_settings import Settings
+
+
+def create_parser(settings: Settings) -> ArgumentParser:
+    """
+    Parser de comandos de entrada.
+
+    Returns:
+        ArgumentParser: Objeto ArgumentParser.
+    """
+    parser = ArgumentParser(
+        prog=f"{settings.APP_NAME}",
+        usage="genre-editor [options]",
+        description="Edita las etiquetas de género en los tracks e items de Jellyfin.",
+        add_help=True,
+        allow_abbrev=True,
+        exit_on_error=True
+        )
+    
+    subparsers = parser.add_subparsers(dest="command", help="Commands available")
+    
+    # -------------------------------------------
+    # Subcommand: version
+    # -------------------------------------------
+    subparsers.add_parser("version", help="Shows CLI version")
+
+    # -------------------------------------------
+    # Subcommand: init
+    # -------------------------------------------
+    init_parser = subparsers.add_parser("init", help="Initialize configuration and directories")
+    init_parser.add_argument("--host", type=str, required=True, help="Jellyfin server URL (e.g. http://192.168.1.10:8096)")
+    init_parser.add_argument("--api-key", type=str, required=True, help="Your Jellyfin API Key")
+    init_parser.add_argument("--app-name", type=str, default="GenreEditor", help="Custom name for this client")
+
+    # -------------------------------------------
+    # Subcommand: analyze
+    # -------------------------------------------
+    analyze_parser = subparsers.add_parser("analyze", help="Analiza los metadatos de un artista o álbum")
+    analyze_parser.add_argument("--artist", type=str, required=True, help="Nombre del artista a analizar")
+    analyze_parser.add_argument("--album", type=str, help="ID del álbum")
+    analyze_parser.add_argument("--track", type=str, help="ID del track")
+    
+    return parser
