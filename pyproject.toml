@@ -1,6 +1,6 @@
 [project]
 name = "genre-editor"
-version = "0.1.0"
+version = "0.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -9,4 +9,9 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "rich>=14.3.3",
+]
+
+[dependency-groups]
+dev = [
+    "bumpver>=2025.1131",
 ]
