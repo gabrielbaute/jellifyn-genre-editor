@@ -7,7 +7,7 @@ from app.settings.app_settings import settings
 from app.settings.app_logs_settings import JGELogger
 
 from app.cli.parser import create_parser
-from app.cli.commands import show_version, initialize_config, analyze_artist, analyze_album, analyze_track
+from app.cli.commands import show_version, initialize_config, analyze_artist, analyze_album, analyze_track, run_edit
 
 JGELogger.setup_logging()
 
@@ -45,6 +45,17 @@ def main() -> None:
                 # Opcional: Podríamos llamar automáticamente a analyze_albums del artista aquí
             else:
                 console.print("[yellow]Debes especificar --artist, --album o --track[/yellow]")
+        finally:
+            jf_service.close()
+
+    elif args.command == "edit":
+        jf_service = JellyfinClientService(settings)
+        try:
+            if not jf_service.verify_connection():
+                return
+            
+            from app.cli.commands.edit import run_edit
+            run_edit(console, jf_service, args)
         finally:
             jf_service.close()
 
