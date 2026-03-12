@@ -3,13 +3,20 @@ name = "genre-editor"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.28.1",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "rich>=14.3.3",
 ]
+
+[project.scripts]
+jge = "app.cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
