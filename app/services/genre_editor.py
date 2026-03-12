@@ -15,6 +15,86 @@ class GenreEditor:
         self.jf = service
         self.logger = logging.getLogger(self.__class__.__name__)
 
+    # ============== Métodos internos ==============
+    def _add_genre_to_single_track(self, track_id: str, genre: str) -> bool:
+        """
+        Lógica interna para obtener, modificar y subir el track.
+
+        Args:
+            track_id (str): ID del track.
+            genre (str): Género a añadir.
+            
+        Returns:
+            bool: True si la actualización fue exitosa, False en caso contrario.
+        """
+        # 1. Obtener JSON crudo
+        raw_data = self.jf.get_raw_item(track_id)
+        if not raw_data:
+            return False
+
+        # 2. Modificar solo si no existe (idempotencia)
+        current_genres = raw_data.get("Genres", [])
+        if genre not in current_genres:
+            current_genres.append(genre)
+            raw_data["Genres"] = current_genres
+            
+            # 3. Actualizar
+            success = self.jf.update_item(track_id, raw_data)
+            if success:
+                self.logger.info(f"[OK] Track '{raw_data.get('Name')}': +{genre}")
+                return True
+        return False
+    
+    def _add_genre_to_an_album_item(self, item_id: str, genre: str) -> bool:
+        """
+        Lógica interna para obtener, modificar y subir el álbum. Se asigna el género al album en si, sin tocar los tracks.
+
+        Args:
+            item_id (str): ID del álbum.
+            genre (str): Género a añadir.
+        
+        Returns:
+            bool: True si la actualización fue exitosa, False en caso contrario.
+        """
+        raw_data = self.jf.get_raw_item(item_id)
+        if not raw_data:
+            return False
+        
+        current_genres = raw_data.get("Genres", [])
+        if not genre in current_genres:
+            current_genres.append(genre)
+            raw_data["Genres"] = current_genres
+            success = self.jf.update_item(item_id, raw_data)
+            if success:
+                self.logger.info(f"[OK] Album ':{raw_data.get('Name')}': +{genre}")
+                return True
+        return False
+    
+    def _add_genre_to_an_artist_item(self, item_id: str, genre: str) -> bool:
+        """
+        Lógica interna para obtener, modificar y subir el artista. Se asigna el género al artista en si, sin tocar los tracks.
+        
+        Args:
+            item_id (str): ID del artista.
+            genre (str): Género a añadir.
+        Returns:
+            bool: True si la actualización fue exitosa, False en caso contrario.
+        """
+        raw_data = self.jf.get_raw_item(item_id)
+        if not raw_data:
+            return False
+        
+        current_genres = raw_data.get("Genres", [])
+        if not genre in current_genres:
+            current_genres.append(genre)
+            raw_data["Genres"]
+            success = self.jf.update_item(item_id, raw_data)
+            if success:
+                self.logger.info(f"[OK] Artista {raw_data.get('Name')}': +{genre}")
+                return True
+        return False
+
+    # ============== Métodos públicos ==============
     def get_albums_by_artist(self, artist_name: str) -> List[Album]:
         """
         Obtiene la lista de álbumes de un artista.
@@ -43,7 +123,6 @@ class GenreEditor:
             None
         """
         self._add_genre_to_an_album_item(album_id, genre)
-
 
     def add_genre_to_album_tracks(self, album_id: str, genre: str) -> None:
         """
@@ -80,47 +159,3 @@ class GenreEditor:
         for album in albums:
             self.logger.info(f"Procesando álbum: {album.name}")
             self.add_genre_to_album_tracks(album.id, genre)
-
-    def _add_genre_to_single_track(self, track_id: str, genre: str) -> bool:
-        """
-        Lógica interna para obtener, modificar y subir el track.
-
-        Args:
-            track_id (str): ID del track.
-            genre (str): Género a añadir.
-            
-        Returns:
-            bool: True si la actualización fue exitosa, False en caso contrario.
-        """
-        # 1. Obtener JSON crudo
-        raw_data = self.jf.get_raw_item(track_id)
-        if not raw_data:
-            return False
-
-        # 2. Modificar solo si no existe (idempotencia)
-        current_genres = raw_data.get("Genres", [])
-        if genre not in current_genres:
-            current_genres.append(genre)
-            raw_data["Genres"] = current_genres
-            
-            # 3. Actualizar
-            success = self.jf.update_item(track_id, raw_data)
-            if success:
-                self.logger.info(f"[OK] Track '{raw_data.get('Name')}': +{genre}")
-                return True
-        return False
-    
-    def _add_genre_to_an_album_item(self, item_id: str, genre: str) -> bool:
-        raw_data = self.jf.get_raw_item(item_id)
-        if not raw_data:
-            return False
-        
-        current_genres = raw_data.get("Genres", [])
-        if not genre in current_genres:
-            current_genres.append(genre)
-            raw_data["Genres"] = current_genres
-            success = self.jf.update_item(item_id, raw_data)
-            if success:
-                self.logger.info(f"[OK] Album ':{raw_data.get('Name')}': +{genre}")
-                return True
-        return False
