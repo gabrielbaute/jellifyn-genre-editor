@@ -42,5 +42,19 @@ def create_parser(settings: Settings) -> ArgumentParser:
     analyze_parser.add_argument("--artist", type=str, required=True, help="Nombre del artista a analizar")
     analyze_parser.add_argument("--album", type=str, help="ID del álbum")
     analyze_parser.add_argument("--track", type=str, help="ID del track")
+
+    # -------------------------------------------
+    # Subcommand: edit
+    # -------------------------------------------
+    edit_parser = subparsers.add_parser("edit", help="Edita géneros de artistas, álbumes o tracks.")
+    edit_parser.add_argument("--genre", type=str, required=True, help="Género que se desea añadir.")
     
+    # Flags de objetivo
+    edit_parser.add_argument("--artist", type=str, help="Nombre del artista.")
+    edit_parser.add_argument("--album", type=str, help="ID del álbum.")
+    edit_parser.add_argument("--track", type=str, help="ID del track.")
+    
+    # Flag opcional para procesar en cascada
+    edit_parser.add_argument("--recursive", action="store_true", help="Si se usa con --artist o --album, aplica el género también a todos los tracks.")
+
     return parser
