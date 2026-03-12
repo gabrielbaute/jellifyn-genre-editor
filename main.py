@@ -14,8 +14,8 @@ def main():
 
     try:
         # Escenario A: Editar todo un artista
-        print("--- Editando Artista: Indila ---")
-        editor.add_genre_to_all_artist_tracks("Em Beihold", "Alternative Pop")
+        print("--- Editando Artista: Beetlebug ---")
+        editor.add_genre_to_all_artist_tracks("Beetlebug", "Indie")
 
         # Escenario B: Editar un álbum específico
         # Si ya conoces el ID o lo obtienes de una búsqueda
