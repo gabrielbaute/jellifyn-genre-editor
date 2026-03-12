@@ -1,6 +1,7 @@
 import logging
 from typing import List
-from app.schemas import Album
+from app.schemas import Album, EditResult
+from app.enums import ItemType, EditStatus
 from app.services.jellyfin_client_service import JellyfinClientService
 
 class GenreEditor:
@@ -15,84 +16,47 @@ class GenreEditor:
         self.jf = service
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    # ============== Métodos internos ==============
-    def _add_genre_to_single_track(self, track_id: str, genre: str) -> bool:
+    # ============== Métodos internos (Atómicos) ==============
+    def _update_item_genre(self, item_id: str, genre: str, item_type_label: ItemType) -> EditStatus:
         """
-        Lógica interna para obtener, modificar y subir el track.
+        Método atómico genérico para actualizar el género de cualquier ítem.
 
         Args:
-            track_id (str): ID del track.
+            item_id (str): ID del ítem.
             genre (str): Género a añadir.
+            item_type_label (ItemType): Etiqueta del tipo de ítem.
             
         Returns:
-            bool: True si la actualización fue exitosa, False en caso contrario.
+            EditStatus: Estado de edición.
         """
-        # 1. Obtener JSON crudo
-        raw_data = self.jf.get_raw_item(track_id)
+        raw_data = self.jf.get_raw_item(item_id)
         if not raw_data:
-            return False
+            self.logger.error(f"No se pudo obtener el ítem {item_id}")
+            return EditStatus.ERROR
 
-        # 2. Modificar solo si no existe (idempotencia)
+        name = raw_data.get("Name", "Unknown")
         current_genres = raw_data.get("Genres", [])
+
         if genre not in current_genres:
             current_genres.append(genre)
             raw_data["Genres"] = current_genres
             
-            # 3. Actualizar
-            success = self.jf.update_item(track_id, raw_data)
+            success = self.jf.update_item(item_id, raw_data)
             if success:
-                self.logger.info(f"[OK] Track '{raw_data.get('Name')}': +{genre}")
-                return True
-        return False
-    
-    def _add_genre_to_an_album_item(self, item_id: str, genre: str) -> bool:
-        """
-        Lógica interna para obtener, modificar y subir el álbum. Se asigna el género al album en si, sin tocar los tracks.
+                self.logger.info(f"[OK] {item_type_label.value} '{name}': +{genre}")
+                return EditStatus.UPDATED
+            return EditStatus.ERROR
+            
+        return EditStatus.SKIPPED
 
-        Args:
-            item_id (str): ID del álbum.
-            genre (str): Género a añadir.
-        
-        Returns:
-            bool: True si la actualización fue exitosa, False en caso contrario.
-        """
-        raw_data = self.jf.get_raw_item(item_id)
-        if not raw_data:
-            return False
-        
-        current_genres = raw_data.get("Genres", [])
-        if not genre in current_genres:
-            current_genres.append(genre)
-            raw_data["Genres"] = current_genres
-            success = self.jf.update_item(item_id, raw_data)
-            if success:
-                self.logger.info(f"[OK] Album ':{raw_data.get('Name')}': +{genre}")
-                return True
-        return False
-    
-    def _add_genre_to_an_artist_item(self, item_id: str, genre: str) -> bool:
-        """
-        Lógica interna para obtener, modificar y subir el artista. Se asigna el género al artista en si, sin tocar los tracks.
-        
-        Args:
-            item_id (str): ID del artista.
-            genre (str): Género a añadir.
-        Returns:
-            bool: True si la actualización fue exitosa, False en caso contrario.
-        """
-        raw_data = self.jf.get_raw_item(item_id)
-        if not raw_data:
-            return False
-        
-        current_genres = raw_data.get("Genres", [])
-        if not genre in current_genres:
-            current_genres.append(genre)
-            raw_data["Genres"]
-            success = self.jf.update_item(item_id, raw_data)
-            if success:
-                self.logger.info(f"[OK] Artista {raw_data.get('Name')}': +{genre}")
-                return True
-        return False
+    def _add_genre_to_single_track(self, track_id: str, genre: str) -> EditStatus:
+        return self._update_item_genre(track_id, genre, ItemType.TRACK)
+
+    def _add_genre_to_an_album_item(self, item_id: str, genre: str) -> EditStatus:
+        return self._update_item_genre(item_id, genre, ItemType.ALBUM)
+
+    def _add_genre_to_an_artist_item(self, item_id: str, genre: str) -> EditStatus:
+        return self._update_item_genre(item_id, genre, ItemType.ARTIST)
 
     # ============== Métodos públicos ==============
     def get_albums_by_artist(self, artist_name: str) -> List[Album]:
@@ -111,51 +75,62 @@ class GenreEditor:
             return []
         return self.jf.get_items_by_artist(artist.artis_id)
 
-    def add_gemre_to_album(self, album_id: str, genre: str) -> None:
+    def add_genre_to_album(self, album_id: str, genre: str) -> EditResult:
         """
-        Añade un género a un álbum específico.
-
-        Args:
-            album_id (str): ID del álbum.
-            genre (str): Género a añadir.
-        
-        Returns:
-            None
-        """
-        self._add_genre_to_an_album_item(album_id, genre)
-
-    def add_genre_to_album_tracks(self, album_id: str, genre: str) -> None:
-        """
-        Añade un género a todos los tracks de un álbum específico.
+        Añade género al álbum y devuelve el resultado para el reporte.
         
         Args:
             album_id (str): ID del álbum.
             genre (str): Género a añadir.
-        
+            
         Returns:
-            None
+            EditResult: Resultado de la edición.
         """
+        # Obtenemos el nombre antes para el resultado si es posible, 
+        # o dejamos que el método atómico haga su magia.
+        status = self._add_genre_to_an_album_item(album_id, genre)
+        return EditResult(name=album_id, item_type=ItemType.ALBUM, status=status)
+
+    def add_genre_to_album_tracks(self, album_id: str, genre: str) -> List[EditResult]:
+        """
+        ñade género a tracks y construye la lista de resultados.
+
+        Args:
+            album_id (str): ID del álbum.
+            genre (str): Género a añadir.
+            
+        Returns:
+            List[EditResult]: Lista de resultados de edición.
+        """
+        results = []
         tracks = self.jf.get_tracks_by_album(album_id)
-        if not tracks:
-            self.logger.error(f"No se encontraron tracks para el álbum: {album_id}")
-            return None
         
-        self.logger.info(f"Procesando {len(tracks)} tracks del álbum: {album_id}")
+        if not tracks:
+            return [EditResult(name=album_id, item_type=ItemType.ALBUM, status=EditStatus.ERROR, message="No tracks found")]
+
         for track in tracks:
-            self._add_genre_to_single_track(track.id, genre)
+            status = self._add_genre_to_single_track(track.id, genre)
+            results.append(EditResult(name=track.name, item_type=ItemType.TRACK, status=status))
+            
+        return results
 
-    def add_genre_to_all_artist_tracks(self, artist_name: str, genre: str) -> None:
+    def add_genre_to_all_artist_tracks(self, artist_name: str, genre: str) -> List[EditResult]:
         """
-        Busca todos los álbumes de un artista y añade el género a cada track.
-
+        Orquestador de alto nivel para todo un artista.
+        
         Args:
             artist_name (str): Nombre del artista.
             genre (str): Género a añadir.
-        
+            
         Returns:
-            None
+            List[EditResult]: Lista de resultados de edición.
         """
+        all_results = []
         albums = self.get_albums_by_artist(artist_name)
+        
         for album in albums:
             self.logger.info(f"Procesando álbum: {album.name}")
-            self.add_genre_to_album_tracks(album.id, genre)
+            album_results = self.add_genre_to_album_tracks(album.id, genre)
+            all_results.extend(album_results)
+            
+        return all_results
