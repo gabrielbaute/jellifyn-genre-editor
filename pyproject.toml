@@ -11,6 +11,9 @@ dependencies = [
     "rich>=14.3.3",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [project.scripts]
 jge = "app.cli.main:main"
 
