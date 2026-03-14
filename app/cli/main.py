@@ -15,7 +15,8 @@ from app.cli.commands import (
     analyze_artist,
     analyze_album, 
     analyze_track, 
-    run_edit
+    run_edit,
+    run_remove
 )
 
 JGELogger.setup_logging()
@@ -69,6 +70,16 @@ def main() -> None:
                 return
             
             run_edit(console, jf_service, args)
+        finally:
+            jf_service.close()
+
+    elif args.command == "remove":
+        jf_service = JellyfinClientService(settings)
+        try:
+            if not jf_service.verify_connection():
+                return
+            
+            run_remove(console, jf_service, args)
         finally:
             jf_service.close()
 

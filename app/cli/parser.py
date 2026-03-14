@@ -65,6 +65,17 @@ def create_parser(settings: Settings) -> ArgumentParser:
     edit_parser.add_argument("--recursive", action="store_true", help="Si se usa con --artist o --album, aplica el género también a todos los tracks.")
 
     # -------------------------------------------
+    # Subcommand: remove
+    # -------------------------------------------
+    remove_parser = subparsers.add_parser("remove", help="Elimina géneros de forma masiva.")
+    remove_parser.add_argument("--genre", type=str, required=True, help="Género(s) a eliminar (separados por coma).")
+    remove_parser.add_argument("--artist", type=str)
+    remove_parser.add_argument("--album", type=str)
+    remove_parser.add_argument("--track", type=str)
+    remove_parser.add_argument("--recursive", action="store_true")
+    remove_parser.add_argument("--preview", action="store_true", help="Simula la operación sin aplicar cambios.")
+
+    # -------------------------------------------
     # Subcommand: logs
     # -------------------------------------------
     logs_parser = subparsers.add_parser("logs", help="Muestra las últimas entradas del archivo de log.")
