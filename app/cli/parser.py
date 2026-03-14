@@ -35,6 +35,7 @@ def create_parser(settings: Settings) -> ArgumentParser:
     init_parser.add_argument("--api-key", type=str, required=True, help="Your Jellyfin API Key")
     init_parser.add_argument("--time-response", type=int, default=15, help="Server time response for connect validation.")
     init_parser.add_argument("--app-name", type=str, default="GenreEditor", help="Custom name for this client")
+    init_parser.add_argument("--log-level", type=str, default="INFO", help="Logging level. Default: INFO")
 
     # -------------------------------------------
     # Subcommand: analyze
@@ -57,5 +58,16 @@ def create_parser(settings: Settings) -> ArgumentParser:
     
     # Flag opcional para procesar en cascada
     edit_parser.add_argument("--recursive", action="store_true", help="Si se usa con --artist o --album, aplica el género también a todos los tracks.")
+
+    # -------------------------------------------
+    # Subcommand: logs
+    # -------------------------------------------
+    logs_parser = subparsers.add_parser("logs", help="Muestra las últimas entradas del archivo de log.")
+    logs_parser.add_argument(
+        "-n", "--lines", 
+        type=int, 
+        default=25, 
+        help="Número de líneas a mostrar (por defecto: 25)."
+    )
 
     return parser
