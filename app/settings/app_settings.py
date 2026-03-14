@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     API_KEY: str = ""
     JELLIFYIN_HOST: str = ""
     SERVER_TIME_RESPONSE: int = 15
+    LOG_LEVEL: str = "INFO"
     @field_validator("JELLIFYIN_HOST")
     @classmethod
     def clean_host_url(cls, v: str) -> str:
