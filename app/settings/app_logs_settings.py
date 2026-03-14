@@ -54,5 +54,5 @@ class JGELogger:
             level=JGELogger.LEVEL_MAP.get(level, logging.INFO),
             format=log_format,
             datefmt="%Y-%m-%d %H:%M:%S",
-            handlers=[rotate_handler, stream_handler]
+            handlers=[rotate_handler]
         )
