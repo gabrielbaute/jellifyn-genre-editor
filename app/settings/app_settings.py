@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # ------------ Jellyfin ------------
     API_KEY: str = ""
     JELLIFYIN_HOST: str = ""
+    SERVER_TIME_RESPONSE: int = 15
     @field_validator("JELLIFYIN_HOST")
     @classmethod
     def clean_host_url(cls, v: str) -> str:
