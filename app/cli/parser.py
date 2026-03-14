@@ -33,6 +33,7 @@ def create_parser(settings: Settings) -> ArgumentParser:
     init_parser = subparsers.add_parser("init", help="Initialize configuration and directories")
     init_parser.add_argument("--host", type=str, required=True, help="Jellyfin server URL (e.g. http://192.168.1.10:8096)")
     init_parser.add_argument("--api-key", type=str, required=True, help="Your Jellyfin API Key")
+    init_parser.add_argument("--time-response", type=int, default=15, help="Server time response for connect validation.")
     init_parser.add_argument("--app-name", type=str, default="GenreEditor", help="Custom name for this client")
 
     # -------------------------------------------

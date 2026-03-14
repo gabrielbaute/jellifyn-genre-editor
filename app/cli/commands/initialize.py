@@ -5,7 +5,7 @@ from app.settings.app_settings import Settings
 from app.settings.env_content_file import write_content_to_file
 from app.settings.env_file_path import get_env_paths
 
-def initialize_config(console: Console, settings: Settings, host: str, api_key: str, app_name: str) -> None:
+def initialize_config(console: Console, settings: Settings, host: str, api_key: str, app_name: str, server_time_response: int) -> None:
     """
     Crea los directorios y el archivo .env inicial.
     """
@@ -26,6 +26,7 @@ def initialize_config(console: Console, settings: Settings, host: str, api_key: 
         app_name=app_name, 
         api_key=api_key, 
         host=host, 
+        server_time_response=server_time_response,
         timezone=settings.TIMEZONE
     )
 
