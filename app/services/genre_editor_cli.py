@@ -118,7 +118,7 @@ class GenreEditorCLI:
         Args:
             tasks: Lista de unidades de trabajo (EditTask).
             genres: Lista de géneros a añadir (e.g., ["Jazz", "Swing"]).
-            progress_callback: Función opcional para actualizar la UI (barra de progreso).
+            progress_callback: Función para actualizar la UI (barra de progreso).
         
         Returns:
             List[EditResult]: Lista de resultados de edición.
@@ -171,5 +171,61 @@ class GenreEditorCLI:
                 status=status, 
                 message=msg
             ))
+
+        return results
+    
+    def execute_remove_tasks(
+        self, 
+        tasks: List[EditTask], 
+        genres_to_remove: List[str], 
+        progress_callback: Optional[Callable[[str], None]] = None
+    ) -> List[EditResult]:
+        """
+        Recorre las tareas y elimina los géneros especificados de cada ítem.
+
+        Args:
+            tasks: Lista de unidades de trabajo (EditTask).
+            genres_to_remove: Lista de géneros a eliminar
+            progress_callback: Función para actualizar la UI (barra de progreso).
+
+        Returns:
+            List[EditResult]: Lista de resultados de edición.
+        """
+        results: List[EditResult] = []
+
+        for task in tasks:
+            if progress_callback:
+                progress_callback(f"Limpiando {task.type.value}: {task.name}")
+
+            raw_data = self.jf.get_raw_item(task.item_id)
+            if not raw_data:
+                results.append(EditResult(
+                    name=task.name, item_type=task.type, 
+                    status=EditStatus.ERROR, message="No se pudo recuperar"
+                ))
+                continue
+
+            current_genres: List[str] = raw_data.get("Genres", [])
+            # Lógica de filtrado: nos quedamos con los que NO están en la lista de eliminación
+            new_genres = [g for g in current_genres if g not in genres_to_remove]
+
+            # Solo actualizamos si la lista cambió (es decir, encontramos géneros para borrar)
+            if len(new_genres) < len(current_genres):
+                raw_data["Genres"] = new_genres
+                success = self.jf.update_item(task.item_id, raw_data)
+                
+                if success:
+                    removed = [g for g in current_genres if g in genres_to_remove]
+                    status = EditStatus.REMOVED
+                    msg = f"Eliminados: {', '.join(removed)}"
+                else:
+                    status = EditStatus.ERROR
+                    self.logger.error(f"Error al actualizar en el servidor: {task.name}")
+                    msg = "Error al actualizar en servidor"
+            else:
+                status = EditStatus.SKIPPED
+                msg = "El ítem no contenía ninguno de esos géneros"
+
+            results.append(EditResult(name=task.name, item_type=task.type, status=status, message=msg))
 
         return results
