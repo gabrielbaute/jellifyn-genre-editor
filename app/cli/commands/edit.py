@@ -1,13 +1,13 @@
 from typing import List
-from rich.table import Table
+
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
-from app.enums import EditStatus, ItemType
+from app.errors import ApiError
 from app.schemas import EditResult, EditTask
-from app.errors import GenreEditorError, ApiError
 from app.services.genre_editor_cli import GenreEditorCLI 
 from app.services.jellyfin_client_service import JellyfinClientService
+from app.cli.utils.table_report import display_edit_report
 
 def run_edit(console: Console, jf_service: JellyfinClientService, args) -> None:
     """
@@ -77,45 +77,3 @@ def run_edit(console: Console, jf_service: JellyfinClientService, args) -> None:
         console.print(f"\n[bold red]❌ Error de API:[/bold red] {e.message}")
     except Exception as e:
         console.print(f"\n[bold red]💥 Error crítico inesperado:[/bold red] {str(e)}")
-
-def display_edit_report(console: Console, results: List[EditResult]) -> None:
-    """Genera una tabla resumen de la operación de edición."""
-    # (Mantenemos tu implementación de display_edit_report tal cual la proporcionaste)
-    if not results:
-        return
-
-    table = Table(
-        title="\n[bold]REPORTE DE EDICIÓN[/bold]",
-        show_header=True,
-        header_style="bold magenta",
-        border_style="blue",
-        expand=True
-    )
-    
-    table.add_column("Ítem", style="cyan", no_wrap=True)
-    table.add_column("Tipo", style="dim", justify="center")
-    table.add_column("Estado", justify="center")
-    table.add_column("Detalle", style="italic")
-
-    for res in results:
-        status_color = {
-            EditStatus.UPDATED: "green",
-            EditStatus.SKIPPED: "yellow",
-            EditStatus.ERROR: "red"
-        }.get(res.status, "white")
-        
-        table.add_row(
-            res.name,
-            res.item_type.value,
-            f"[{status_color}]{res.status}[/{status_color}]",
-            res.message or "-"
-        )
-
-    console.print(table)
-    
-    updated = len([r for r in results if r.status == EditStatus.UPDATED])
-    skipped = len([r for r in results if r.status == EditStatus.SKIPPED])
-    errors = len([r for r in results if r.status == EditStatus.ERROR])
-    
-    console.print(f"\n[bold]Resumen:[/bold] [green]{updated} actualizados[/green], "
-                  f"[yellow]{skipped} omitidos[/yellow], [red]{errors} errores[/red].")
