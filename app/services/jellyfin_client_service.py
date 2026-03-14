@@ -1,11 +1,11 @@
 import httpx
-import json
 import logging
 from typing import Any, Dict, List
 
+from app.schemas import Album, Artist, Track
 from app.settings.app_settings import Settings
 from app.services.jellyfin_parser import JellyfinParser
-from app.schemas import Album, Artist, Track
+from app.errors import TimeOutError, AuthError, ApiError, GenreEditorError, ConnectionError
 
 class JellyfinClientService:
     """
@@ -22,6 +22,7 @@ class JellyfinClientService:
         Args:
             settings (Settings): Configuraciones de la aplicación.
         """
+        logging.getLogger("httpx").setLevel(logging.WARNING)
         self.host: str = settings.JELLIFYIN_HOST.rstrip("/")
         self.api_key: str = settings.API_KEY
         self.app_name: str = settings.APP_NAME
@@ -43,8 +44,59 @@ class JellyfinClientService:
         self._client: httpx.Client = httpx.Client(
             base_url=self.host, 
             headers=self.headers,
-            timeout=10.0
+            timeout=float(settings.SERVER_TIME_RESPONSE)
         )
+
+    def _handle_httpx_error(self, e: Exception, context: str):
+        """Mapea errores de httpx a tus excepciones personalizadas."""
+        if isinstance(e, httpx.TimeoutException):
+            raise TimeOutError(f"Tiempo de espera agotado en {context}", details={"url": str(e.request.url)})
+        
+        if isinstance(e, httpx.HTTPStatusError):
+            code = e.response.status_code
+            if code in (401, 403):
+                raise AuthError(f"Error de autenticación en Jellyfin. Revisa tu API Key.", details={"status": code})
+            if code == 404:
+                raise ApiError(f"Recurso no encontrado: {context}", details={"status": 404})
+            if code == 400:
+                raise ApiError(f"Solicitud incorrecta: {context}", details={"status": 400})
+            if code == 500:
+                raise ApiError(f"Error interno del servidor: {context}", details={"status": 500})
+            
+            raise ApiError(f"Error de API ({code}) en {context}", details={"response": e.response.text})
+
+        raise GenreEditorError(f"Error inesperado en {context}: {str(e)}")
+
+    def _raw_get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Método auxiliar para 'explorar' la API. 
+        Retorna el JSON crudo para que podamos analizarlo y luego crear los modelos.
+        """
+        try:
+            response = self._client.get(endpoint, params=params)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self._handle_httpx_error(e, endpoint)
+
+    def _raw_post(self, endpoint: str, data: Dict[str, Any]) -> bool:
+        """
+        Envía una petición POST al servidor.
+        
+        Args:
+            endpoint (str): El endpoint de la API.
+            data (Dict[str, Any]): El cuerpo de la petición.
+            
+        Returns:
+            bool: True si la actualización fue exitosa (Status 204).
+        """
+        try:
+            response = self._client.post(endpoint, json=data)
+            response.raise_for_status()
+            # El status 204 No Content es el éxito estándar en Jellyfin para updates
+            return response.status_code == 204
+        except Exception as e:
+            self._handle_httpx_error(e, endpoint)
 
     def get_current_user_id(self) -> str:
         """Obtiene el ID del primer usuario administrador disponible."""
@@ -69,45 +121,13 @@ class JellyfinClientService:
             response.raise_for_status()
             self.logger.info(f"[OK] Conexión establecida con: {response.json().get('ServerName')}")
             return True
-        except httpx.HTTPStatusError as e:
-            self.logger.error(f"[Error] Error de autenticación o servidor: {e.response.status_code}")
-            return False
-        except Exception as e:
-            self.logger.error(f"[Error] No se pudo conectar al host: {e}")
+        except (AuthError, ApiError, TimeOutError) as e:
+            self.logger.error(f"Fallo de conexión: {e.message}")
             return False
 
     def close(self) -> None:
         """Cierra la sesión del cliente httpx."""
         self._client.close()
-
-    def _raw_get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        """
-        Método auxiliar para 'explorar' la API. 
-        Retorna el JSON crudo para que podamos analizarlo y luego crear los modelos.
-        """
-        response = self._client.get(endpoint, params=params)
-        response.raise_for_status()
-        return response.json()
-
-    def _raw_post(self, endpoint: str, data: Dict[str, Any]) -> bool:
-        """
-        Envía una petición POST al servidor.
-        
-        Args:
-            endpoint (str): El endpoint de la API.
-            data (Dict[str, Any]): El cuerpo de la petición.
-            
-        Returns:
-            bool: True si la actualización fue exitosa (Status 204).
-        """
-        try:
-            response = self._client.post(endpoint, json=data)
-            response.raise_for_status()
-            # El status 204 No Content es el éxito estándar en Jellyfin para updates
-            return response.status_code == 204
-        except httpx.HTTPStatusError as e:
-            self.logger.error(f"Error en update: {e.response.status_code} - {e.response.text}")
-            return False
 
     def update_item_metadata(self, item_id: str, updated_data: Dict[str, Any]) -> bool:
         """
