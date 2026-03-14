@@ -11,6 +11,7 @@ from app.cli.commands import (
     show_version, 
     initialize_config, 
     show_logs,
+    show_config,
     analyze_artist,
     analyze_album, 
     analyze_track, 
@@ -38,6 +39,9 @@ def main() -> None:
             server_time_response=args.time_response
             
         )
+
+    elif args.command == "config":
+        show_config(console, settings)
 
     elif args.command == "analyze":
         jf_service = JellyfinClientService(settings)

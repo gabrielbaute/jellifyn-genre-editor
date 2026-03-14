@@ -38,6 +38,11 @@ def create_parser(settings: Settings) -> ArgumentParser:
     init_parser.add_argument("--log-level", type=str, default="INFO", help="Logging level. Default: INFO")
 
     # -------------------------------------------
+    # Subcommand: config
+    # -------------------------------------------
+    subparsers.add_parser("config", help="Muestra la configuración actual cargada en el sistema.")
+
+    # -------------------------------------------
     # Subcommand: analyze
     # -------------------------------------------
     analyze_parser = subparsers.add_parser("analyze", help="Analiza los metadatos de un artista o álbum")
