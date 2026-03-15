@@ -53,40 +53,93 @@ if __name__ == "__main__":
 ```
 Para usarlo de esta manera, como script y no como CLI, es importante que configures un archivo .env en l raíz del proyecto, donde clonaste el repo, puedes guiarte del .env.example:
 
-| Variable         | Descripción                                                                       |
-|------------------|-----------------------------------------------------------------------------------|
-| `APP_NAME`       | Nombre de la APP, puedes poner el mismo que en jellyfin cuando creaste la api_key |
-| `API_KEY`        | api_key generada por Jellyfin                                                     |
-| `JELLIFYIN_HOST` | Dirección del servidor de Jellyfin en tu red local o en tu dominio                |
+| Variable               | Descripción                                                                       |
+|------------------------|-----------------------------------------------------------------------------------|
+| `APP_NAME`             | Nombre de la APP, puedes poner el mismo que en jellyfin cuando creaste la api_key |
+| `API_KEY`              | api_key generada por Jellyfin                                                     |
+| `JELLIFYIN_HOST`       | Dirección del servidor de Jellyfin en tu red local o en tu dominio                |
+| `LOG_LEVEL`            | Nivel del Log (INFO por defecto)                                                  |
+| `SERVER_TIME_RESPONSE` | Tiempo de espera de peticiones al servidor antes de considerar que hay un error   |
 
 
 ## 🛠 Guía de Comandos: GenreEditor CLI
 
-La CLI se ejecuta utilizando el comando base `jge` (por Jellyfin Genre Editor). A continuación, se detallan los subcomandos disponibles y sus respectivos argumentos:
+La CLI se ejecuta utilizando el comando base `jge`. Todos los comandos de modificación soportan el flag `--preview` para garantizar la seguridad de los metadatos antes de cualquier escritura real.
 
-| Comando       | Acción             | Flags / Argumentos | Descripción                                 |
-| --------------| ------------------ |------------------- | ------------------------------------------- |
-| **`version`** | Muestra la versión | *(Ninguno)*        | Imprime la versión actual de la aplicación. |
-| **`init`**    | Inicialización     | `--host` (REQ)     | URL del servidor (ej. `http://localhost:8096`). |
-|               |                    | `--api-key` (REQ)  | Token de acceso generado en Jellyfin. |
-|               |                    | `--app-name`       | Nombre personalizado para la instancia (Default: `GenreEditor`). |
-| **`analyze`** | Análisis de metadatos | `--artist` (REQ) | Nombre del artista para buscar y listar álbumes/IDs. |
-|  |  | `--album` | ID específico de un álbum para analizar sus tracks. |
-|  |  | `--track` | ID específico de un track para ver su metadata cruda. |
-| **`edit`** | Modificación de géneros | `--genre` (REQ) | El nombre del género que se desea añadir (ej. "Rock"). |
-|  |  | `--artist` | Aplica el género a la ficha del artista. |
-|  |  | `--album` | Aplica el género a la ficha del álbum (usar ID). |
-|  |  | `--track` | Aplica el género a un track específico (usar ID). |
-|  |  | `--recursive` | **Flag:** Si se usa con `--artist` o `--album`, propaga el género a todos los tracks hijos. |
+| Comando | Acción | Argumentos Principales | Flags Opcionales | Descripción |
+| --- | --- | --- | --- | --- |
+| **`version`** | Versión | *(Ninguno)* |  | Muestra la versión actual de la app. |
+| **`init`** | Inicialización | `--host`, `--api-key` | `--app-name`, `--log-level`, `--time-response` | Configura el entorno y crea el archivo `.env`. |
+| **`config`** | Configuración | *(Ninguno)* |  | Muestra una tabla con los parámetros actuales del sistema. |
+| **`logs`** | Diagnóstico |  | `-n, --lines` | Visualiza las últimas entradas del log (Default: 25 líneas). |
+| **`analyze`** | Exploración | `--artist` | `--album`, `--track` | Busca IDs y analiza géneros actuales sin modificar nada. |
+| **`edit`** | Adición | `-g, --genre` (REQ) | `--artist`, `--album`, `--track`, `-r, --recursive`, **`-p, --preview`** | Añade géneros a los ítems especificados. |
+| **`remove`** | Eliminación | `-g, --genre` (REQ) | `--artist`, `--album`, `--track`, `-r, --recursive`, **`-p, --preview`** | Elimina géneros específicos de los ítems. |
 
 ---
+
+## 🚀 Ejemplos de Uso
+
+A continuación se presentan ejemplos prácticos basados en flujos de trabajo reales:
+
+### 1. Configuración Inicial
+
+Para empezar a usar la herramienta con tu servidor self-hosted:
+
+```bash
+jge init --host "http://192.168.1.35:8096" --api-key "tu_api_key_aqui" --log-level "DEBUG"
+```
+
+### 2. Análisis de un Artista
+
+Antes de editar, es útil conocer los IDs de los álbumes:
+
+```bash
+jge analyze --artist "Louis Prima"
+```
+
+### 3. Edición Masiva (Con Preview)
+
+Si quieres añadir el género "Swing" a todos los álbumes y canciones de un artista, pero quieres estar seguro primero:
+
+```bash
+jge edit --genre "Swing" --artist "Louis Prima" --recursive --preview
+```
+
+*Si los resultados en la tabla son correctos, simplemente quita el flag `--preview` para aplicar.*
+
+### 4. Limpieza de Etiquetas Erróneas
+
+Para eliminar un género mal escrito (ej. "Jaz" en lugar de "Jazz") de un álbum específico y todos sus tracks:
+
+```bash
+jge remove --genre "Jaz" --album "ID_DEL_ALBUM" --recursive
+```
+
+### 5. Edición de Múltiples Géneros
+
+Puedes añadir o eliminar varios géneros a la vez usando comas o puntos y coma:
+
+```bash
+jge edit --genre "Jazz, Big Band; Classics" --track "ID_DEL_TRACK"
+```
+
+### 6. Monitoreo del Sistema
+
+Si algo no funciona como esperas, verifica los logs o la configuración cargada:
+
+```bash
+jge config
+jge logs --lines 50
+```
 
 ### 💡 Notas de uso rápido
 
 1. **Prioridad en `edit`:** Los flags `--artist`, `--album` y `--track` determinan el "objetivo" de la operación. Se recomienda usar solo uno a la vez.
 2. **Uso de IDs:** Para los niveles de álbum y track, se deben utilizar los IDs obtenidos previamente con el comando `analyze`.
-3. **Recursividad:** El flag `--recursive` es la herramienta más potente para la edición masiva; asegúrate de haber analizado bien el objetivo antes de ejecutarlo.
+3. **Seguridad**: El flag `--recursive` es potente. Úsalo siempre con `--preview` la primera vez.
 4. **El comando init**: este comando es el primero que debes ejecutar si usas la CLI (~~y por qué carajos entonces lo mencionas de último?~~), mediante este comando creamos una carpeta en el directorio del usuario (espero tengas permisos) donde situaremos el .env con los datos de conexión, y tendremos además un directorio para los logs, que podrán consultar allí (le haremos un comando de consulta de los logs en un futuro).
+5. **LockData**: Al realizar cambios, la herramienta activa el "Bloqueo de datos" (`LockData: True`) en Jellyfin para evitar que un escaneo automático de la biblioteca sobrescriba tus cambios manuales.
 
 ## 📜 Licencia
 Este es un proyecto bajo licencia MIT, obviamente!
