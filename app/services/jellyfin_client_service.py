@@ -49,8 +49,15 @@ class JellyfinClientService:
 
     def _handle_httpx_error(self, e: Exception, context: str):
         """Mapea errores de httpx a tus excepciones personalizadas."""
+        # Si ya es una de nuestras excepciones, la dejamos pasar
+        if isinstance(e, (AuthError, ApiError, TimeOutError, GenreEditorError)):
+            raise e
+        
         if isinstance(e, httpx.TimeoutException):
             raise TimeOutError(f"Tiempo de espera agotado en {context}", details={"url": str(e.request.url)})
+        
+        if isinstance(e, httpx.ConnectError):
+            raise ConnectionError(f"Error de conexión en {context}", details={"url": str(e.request.url)})
         
         if isinstance(e, httpx.HTTPStatusError):
             code = e.response.status_code
@@ -62,6 +69,8 @@ class JellyfinClientService:
                 raise ApiError(f"Solicitud incorrecta: {context}", details={"status": 400})
             if code == 500:
                 raise ApiError(f"Error interno del servidor: {context}", details={"status": 500})
+            if code == 503:
+                raise ApiError(f"Servicio no disponible: {context}", details={"status": 503})
             
             raise ApiError(f"Error de API ({code}) en {context}", details={"response": e.response.text})
 
@@ -121,8 +130,8 @@ class JellyfinClientService:
             response.raise_for_status()
             self.logger.info(f"[OK] Conexión establecida con: {response.json().get('ServerName')}")
             return True
-        except (AuthError, ApiError, TimeOutError) as e:
-            self.logger.error(f"Fallo de conexión: {e.message}")
+        except Exception as e:
+            self._handle_httpx_error(e, "verify_connection")
             return False
 
     def close(self) -> None:
