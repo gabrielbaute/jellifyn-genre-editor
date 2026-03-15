@@ -33,12 +33,19 @@ def run_remove(console: Console, jf_service: JellyfinClientService, args) -> Non
         all_results: List[EditResult] = []
 
         # FASE 2: Simulación o Ejecución
-        with Progress(SpinnerColumn(), TextColumn("[bold red]{task.description}"), BarColumn(), TaskProgressColumn(), console=console, transient=True) as progress:
+        with Progress(
+            SpinnerColumn(), 
+            BarColumn(), 
+            TaskProgressColumn(), 
+            TextColumn("[bold red]{task.description}"), 
+            console=console, 
+            transient=True
+        ) as progress:
             
             remove_task_id = progress.add_task("Procesando...", total=len(tasks))
 
             for task in tasks:
-                progress.update(remove_task_id, description=f"Evaluando: {task.name}")
+                progress.update(remove_task_id, description=f"Evaluando: {task.name[0:45]}")
                 
                 raw_data = jf_service.get_raw_item(task.item_id)
                 current_genres = raw_data.get("Genres", [])
