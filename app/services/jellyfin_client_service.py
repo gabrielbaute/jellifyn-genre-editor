@@ -56,7 +56,7 @@ class JellyfinClientService:
         if isinstance(e, httpx.TimeoutException):
             raise TimeOutError(f"Tiempo de espera agotado en {context}", details={"url": str(e.request.url)})
         
-        if isinstance(e, httpx.ConnectError):
+        if isinstance(e, (httpx.ConnectError, httpx.RequestError)):
             raise ConnectionError(f"Error de conexión en {context}", details={"url": str(e.request.url)})
         
         if isinstance(e, httpx.HTTPStatusError):
