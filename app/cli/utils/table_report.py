@@ -41,7 +41,7 @@ def display_edit_report(console: Console, results: List[EditResult]) -> None:
         }.get(res.status, "white")
         
         table.add_row(
-            res.name,
+            f"{res.name[0:45]}...",
             res.item_type.value,
             f"[{status_color}]{res.status}[/{status_color}]",
             res.message or "-"
