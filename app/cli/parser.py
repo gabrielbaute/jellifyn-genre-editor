@@ -63,6 +63,7 @@ def create_parser(settings: Settings) -> ArgumentParser:
     
     # Flag opcional para procesar en cascada
     edit_parser.add_argument("-r", "--recursive", action="store_true", help="Si se usa con --artist o --album, aplica el género también a todos los tracks.")
+    edit_parser.add_argument("-p", "--preview", action="store_true", help="Simula la adición de géneros.")
 
     # -------------------------------------------
     # Subcommand: remove
