@@ -12,9 +12,15 @@ def analyze_artist(console: Console, jf_service: JellyfinClientService, artist_n
             artist = jf_service.get_artist_by_name(artist_name)
             # Recuperamos los álbumes del artista para el análisis completo
             albums = jf_service.get_items_by_artist(artist.artis_id)
+
         except Exception as e:
             console.print(f"[bold red]Error al obtener datos del artista:[/bold red] {e}")
             return
+        
+        except KeyboardInterrupt:
+            console.print(f"\n[bold red]❌ Acción cancelada.[/bold red]")
+            return
+
 
     # --- Tabla 1: Información General del Artista ---
     table = Table(

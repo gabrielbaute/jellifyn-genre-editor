@@ -77,3 +77,5 @@ def run_edit(console: Console, jf_service: JellyfinClientService, args) -> None:
         console.print(f"\n[bold red]❌ Error de API:[/bold red] {e.message}")
     except Exception as e:
         console.print(f"\n[bold red]💥 Error crítico inesperado:[/bold red] {str(e)}")
+    except KeyboardInterrupt:
+        console.print(f"\n[bold red]❌ Acción cancelada.[/bold red]")
